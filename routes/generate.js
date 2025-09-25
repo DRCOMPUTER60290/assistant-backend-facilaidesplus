@@ -1,20 +1,27 @@
 const express = require("express");
-const OpenAI = require("openai"); // ✅ nouvelle importation
+const OpenAI = require("openai");
 const axios = require("axios");
-const buildOpenFiscaJSON = require("../utils/openfisca");
 
 const router = express.Router();
 
-// ✅ Configuration OpenAI pour version 4.x
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
 router.post("/", async (req, res) => {
+  const debugMode = req.body.debug === true;
   try {
     const userInput = req.body.message;
 
-    // Étape 1 : demander à ChatGPT de générer le JSON OpenFisca
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Clé OpenAI manquante (OPENAI_API_KEY)" });
+    }
+
+    if (!process.env.OPENFISCA_API_URL) {
+      return res.status(500).json({ error: "URL OpenFisca manquante (OPENFISCA_API_URL)" });
+    }
+
+    // Étape 1 : ChatGPT → JSON OpenFisca
     const prompt = `
 Tu es un assistant social expert. À partir de ce texte utilisateur, génère un objet JSON conforme à l'API OpenFisca (https://api.fr.openfisca.org/latest/calculate). Ne donne que le JSON, sans explication. Texte utilisateur : ${userInput}
 `;
@@ -33,12 +40,30 @@ Tu es un assistant social expert. À partir de ce texte utilisateur, génère un
       ]
     });
 
-    const jsonInput = JSON.parse(aiResponse.choices[0].message.content);
+    const generatedJSON = aiResponse.choices[0].message.content;
 
-    // Étape 2 : envoyer à OpenFisca
-    const openfiscaResponse = await axios.post(process.env.OPENFISCA_API_URL, jsonInput);
+    let jsonInput;
+    try {
+      jsonInput = JSON.parse(generatedJSON);
+    } catch (e) {
+      return res.status(400).json({
+        error: "Erreur de parsing du JSON généré par OpenAI",
+        raw: generatedJSON
+      });
+    }
 
-    // Étape 3 : demander à GPT de reformuler les résultats
+    // Étape 2 : Appel OpenFisca
+    let openfiscaResponse;
+    try {
+      openfiscaResponse = await axios.post(process.env.OPENFISCA_API_URL, jsonInput);
+    } catch (e) {
+      return res.status(502).json({
+        error: "Erreur lors de la communication avec l'API OpenFisca",
+        message: e.message,
+        details: e.response?.data || null
+      });
+    }
+
     const explanationPrompt = `
 Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte clair, pour un utilisateur non expert. Résultats : ${JSON.stringify(openfiscaResponse.data)}
 `;
@@ -58,16 +83,27 @@ Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte c
     });
 
     const finalMessage = finalAIResponse.choices[0].message.content;
-    res.json({ result: finalMessage });
+
+    const response = {
+      result: finalMessage
+    };
+
+    if (debugMode) {
+      response.debug = {
+        json_envoye_a_openfisca: jsonInput,
+        resultat_openfisca: openfiscaResponse.data
+      };
+    }
+
+    return res.json(response);
 
   } catch (error) {
-    console.error("Erreur de génération :", error);
-    res.status(500).json({ error: "Erreur lors du traitement de la demande." });
+    console.error("Erreur générale :", error);
+    return res.status(500).json({
+      error: "Erreur inattendue",
+      message: error.message
+    });
   }
 });
 
 module.exports = router;
-
-
-module.exports = router;
-
