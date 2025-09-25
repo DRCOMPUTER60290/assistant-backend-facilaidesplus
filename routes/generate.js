@@ -40,17 +40,25 @@ Tu es un assistant social expert. À partir de ce texte utilisateur, génère un
       ]
     });
 
-    const generatedJSON = aiResponse.choices[0].message.content;
+  let generatedJSON = aiResponse.choices[0].message.content.trim();
 
-    let jsonInput;
-    try {
-      jsonInput = JSON.parse(generatedJSON);
-    } catch (e) {
-      return res.status(400).json({
-        error: "Erreur de parsing du JSON généré par OpenAI",
-        raw: generatedJSON
-      });
-    }
+// 🧼 Nettoyage : suppression des balises Markdown ```json ... ```
+if (generatedJSON.startsWith("```json")) {
+  generatedJSON = generatedJSON.replace(/```json/, "").replace(/```$/, "").trim();
+} else if (generatedJSON.startsWith("```")) {
+  generatedJSON = generatedJSON.replace(/```/, "").replace(/```$/, "").trim();
+}
+
+let jsonInput;
+try {
+  jsonInput = JSON.parse(generatedJSON);
+} catch (e) {
+  return res.status(400).json({
+    error: "Erreur de parsing du JSON généré par OpenAI",
+    raw: generatedJSON
+  });
+}
+
 
     // Étape 2 : Appel OpenFisca
     let openfiscaResponse;
@@ -107,3 +115,4 @@ Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte c
 });
 
 module.exports = router;
+
