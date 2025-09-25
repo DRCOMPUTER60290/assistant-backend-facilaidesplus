@@ -31,6 +31,68 @@ Respecte strictement les noms de champs et les valeurs attendues par la spécifi
 
 Rends uniquement le JSON brut sans texte d’explication et sans bloc markdown. Structure bien les identifiants.
 
+Exemple officiel  de json de base envoyé a openfisca pour un couple Claude et dominique gagnant respectivement 20000€ et 30000€ annuel et ayant une fille camille qui n'a pas de revenu : 
+
+{
+  "individus": {
+    "Claude": {
+      "salaire_de_base": {
+        "2017": 20000
+      }
+    },
+    "Dominique": {
+      "salaire_de_base": {
+        "2017": 30000
+      }
+    },
+    "Camille": {
+    }
+  },
+  "menages": {
+    "menage_1": {
+      "personne_de_reference": [
+        "Claude"
+      ],
+      "conjoint": [
+        "Dominique"
+      ],
+      "enfants": [
+        "Camille"
+      ],
+      "revenu_disponible": {
+        "2017": null
+      },
+      "impots_directs": {
+        "2017": null
+      }
+    }
+  },
+  "familles": {
+    "famille_1": {
+      "parents": [
+        "Claude",
+        "Dominique"
+      ],
+      "enfants": [
+        "Camille"
+      ]
+    }
+  },
+  "foyers_fiscaux": {
+    "foyer_fiscal_1": {
+      "declarants": [
+        "Claude",
+        "Dominique"
+      ],
+      "personnes_a_charge": [
+        "Camille"
+      ]
+    }
+  }
+}
+
+
+
 Texte utilisateur : ${userInput}
 `;
 
@@ -126,6 +188,7 @@ Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte c
 });
 
 module.exports = router;
+
 
 
 
