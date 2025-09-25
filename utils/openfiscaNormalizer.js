@@ -5,6 +5,29 @@ const MARITAL_STATUS_KEYS = [
   "statut_matrimonial"
 ];
 
+const ENTITY_DEFINITIONS = {
+  individus: {
+    prefix: "individu",
+    idCandidates: ["id", "identifiant", "identite", "nom", "name"],
+    arrayFields: []
+  },
+  menages: {
+    prefix: "menage",
+    idCandidates: ["id", "identifiant"],
+    arrayFields: ["personne_de_reference", "conjoint", "enfants"]
+  },
+  familles: {
+    prefix: "famille",
+    idCandidates: ["id", "identifiant"],
+    arrayFields: ["parents", "enfants"]
+  },
+  foyers_fiscaux: {
+    prefix: "foyer_fiscal",
+    idCandidates: ["id", "identifiant"],
+    arrayFields: ["declarants", "personnes_a_charge"]
+  }
+};
+
 const MARITAL_STATUS_MAP = (() => {
   const groups = {
     celibataire: ["celibataire", "célibataire", "single", "seul"],
@@ -76,6 +99,8 @@ function normalizeOpenFiscaInput(jsonInput) {
     return jsonInput;
   }
 
+  normalizeEntities(jsonInput);
+
   const individus = jsonInput.individus;
   if (individus && typeof individus === "object" && !Array.isArray(individus)) {
     for (const individu of Object.values(individus)) {
@@ -86,6 +111,86 @@ function normalizeOpenFiscaInput(jsonInput) {
   }
 
   return jsonInput;
+}
+
+function normalizeEntities(jsonInput) {
+  for (const [entityKey, definition] of Object.entries(ENTITY_DEFINITIONS)) {
+    if (!(entityKey in jsonInput)) {
+      continue;
+    }
+
+    const entityValue = jsonInput[entityKey];
+
+    if (Array.isArray(entityValue)) {
+      jsonInput[entityKey] = convertEntityArrayToObject(entityValue, definition);
+    } else if (entityValue && typeof entityValue === "object") {
+      // nothing to do, keep as object
+    } else {
+      jsonInput[entityKey] = {};
+    }
+
+    ensureArrayFields(jsonInput[entityKey], definition.arrayFields);
+  }
+}
+
+function convertEntityArrayToObject(array, definition) {
+  const result = {};
+  let counter = 1;
+
+  for (const item of array) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const clone = { ...item };
+    const id = extractEntityId(clone, definition, counter);
+    counter += 1;
+
+    definition.idCandidates.forEach((candidate) => delete clone[candidate]);
+
+    result[id] = clone;
+  }
+
+  return result;
+}
+
+function extractEntityId(entity, definition, counter) {
+  for (const candidate of definition.idCandidates) {
+    const value = entity[candidate];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return `${definition.prefix}_${counter}`;
+}
+
+function ensureArrayFields(entities, fieldNames) {
+  if (!fieldNames.length) {
+    return;
+  }
+
+  for (const entity of Object.values(entities)) {
+    if (!entity || typeof entity !== "object") {
+      continue;
+    }
+
+    for (const field of fieldNames) {
+      if (!(field in entity)) {
+        continue;
+      }
+
+      const value = entity[field];
+
+      if (value == null) {
+        entity[field] = [];
+      } else if (Array.isArray(value)) {
+        entity[field] = value.filter((item) => item != null && item !== "");
+      } else {
+        entity[field] = [value];
+      }
+    }
+  }
 }
 
 module.exports = {
