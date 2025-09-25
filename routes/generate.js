@@ -9,6 +9,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+const currentYear = new Date().getFullYear();
+
 router.post("/", async (req, res) => {
   const debugFlag = req.body.debug;
   const debugMode = debugFlag === true || debugFlag === "true";
@@ -30,20 +32,22 @@ Tu es un assistant social expert. À partir du texte ci-dessous, génère un obj
 ⚠️ Les seules entités valides sont : "individus", "menages", "foyers_fiscaux", "familles". N'utilise jamais "persons", "households", ni "families" en anglais.
 Respecte strictement les noms de champs et les valeurs attendues par la spécification.
 
+L'année de référence pour tous les montants et périodes doit être ${currentYear}. Utilise cette année par défaut si l'utilisateur n'en fournit pas explicitement une autre.
+
 Rends uniquement le JSON brut sans texte d’explication et sans bloc markdown. Structure bien les identifiants.
 
-Exemple officiel  de json de base envoyé a openfisca pour un couple Claude et dominique gagnant respectivement 20000€ et 30000€ annuel et ayant une fille camille qui n'a pas de revenu : 
+Exemple officiel  de json de base envoyé a openfisca pour un couple Claude et dominique gagnant respectivement 20000€ et 30000€ annuel et ayant une fille camille qui n'a pas de revenu :
 
 {
   "individus": {
     "Claude": {
       "salaire_de_base": {
-        "2017": 20000
+        "${currentYear}": 20000
       }
     },
     "Dominique": {
       "salaire_de_base": {
-        "2017": 30000
+        "${currentYear}": 30000
       }
     },
     "Camille": {
@@ -61,10 +65,10 @@ Exemple officiel  de json de base envoyé a openfisca pour un couple Claude et d
         "Camille"
       ],
       "revenu_disponible": {
-        "2017": null
+        "${currentYear}": null
       },
       "impots_directs": {
-        "2017": null
+        "${currentYear}": null
       }
     }
   },
@@ -147,7 +151,7 @@ try {
     }
 
     const explanationPrompt = `
-Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte clair, pour un utilisateur non expert. Résultats : ${JSON.stringify(openfiscaResponse.data)}
+Nous sommes en ${currentYear}. Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte clair pour un utilisateur non expert en gardant cette année de référence. Résultats : ${JSON.stringify(openfiscaResponse.data)}
 `;
 
     const finalAIResponse = await openai.chat.completions.create({
