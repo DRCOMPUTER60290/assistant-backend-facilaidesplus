@@ -10,7 +10,8 @@ const openai = new OpenAI({
 });
 
 router.post("/", async (req, res) => {
-  const debugMode = req.body.debug === true;
+  const debugFlag = req.body.debug;
+  const debugMode = debugFlag === true || debugFlag === "true";
   try {
     const userInput = req.body.message;
 
