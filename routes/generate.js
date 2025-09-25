@@ -24,10 +24,10 @@ router.post("/", async (req, res) => {
 
     // Étape 1 : ChatGPT → JSON OpenFisca
     const prompt = `
-Tu es un assistant social expert. À partir du texte ci-dessous, génère un objet JSON conforme à l'API OpenFisca France (https://api.fr.openfisca.org/latest/calculate).
+Tu es un assistant social expert. À partir du texte ci-dessous, génère un objet JSON conforme à l'API OpenFisca France (https://api.fr.openfisca.org/latest/calculate) pour construire le json tu peux t'aider de la spec officiel d'openfisca via ce lien : https://api.fr.openfisca.org/latest/spec.
 
 ⚠️ Les seules entités valides sont : "individus", "menages", "foyers_fiscaux", "familles". N'utilise jamais "persons", "households", ni "families" en anglais.
-Respecte strictement les noms de champs et les valeurs attendues par la spécification. Par exemple, pour un individu, le champ "situation_familiale" doit prendre l'une des valeurs : "celibataire", "marie", "pacse", "concubinage", "divorce", "veuf", "separe" (sans accents). Lorsque le statut matrimonial est mentionné par l'utilisateur, reprends-le tel quel en le traduisant uniquement pour correspondre à cette liste.
+Respecte strictement les noms de champs et les valeurs attendues par la spécification.
 
 Rends uniquement le JSON brut sans texte d’explication et sans bloc markdown. Structure bien les identifiants.
 
@@ -126,5 +126,6 @@ Voici les résultats JSON d’une simulation OpenFisca. Reformule-les en texte c
 });
 
 module.exports = router;
+
 
 
