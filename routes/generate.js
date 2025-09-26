@@ -2,6 +2,10 @@ const express = require("express");
 const OpenAI = require("openai");
 const axios = require("axios");
 const { normalizeOpenFiscaInput } = require("../utils/openfiscaNormalizer");
+const {
+  ensureVariablesMatchEntities,
+  EntityValidationError
+} = require("../utils/openfiscaEntityValidator");
 
 const router = express.Router();
 
@@ -142,6 +146,39 @@ try {
     raw: generatedJSON
   });
 }
+
+    try {
+      const { moves, unresolved } = await ensureVariablesMatchEntities(jsonInput, {
+        debugMode
+      });
+
+      if (debugMode) {
+        if (moves.length > 0) {
+          console.log(
+            "[DEBUG] Variables déplacées pour correspondre à l'entité OpenFisca:",
+            moves
+          );
+        }
+        if (unresolved.length > 0) {
+          console.warn(
+            "[DEBUG] Variables dont l'entité n'a pas pu être corrigée automatiquement:",
+            unresolved
+          );
+        }
+      }
+    } catch (entityError) {
+      if (entityError instanceof EntityValidationError) {
+        return res.status(400).json({
+          error: entityError.message,
+          details: entityError.details
+        });
+      }
+
+      return res.status(500).json({
+        error: "Erreur lors de la validation des entités OpenFisca",
+        message: entityError.message
+      });
+    }
 
     jsonInput = normalizeOpenFiscaInput(jsonInput);
 
