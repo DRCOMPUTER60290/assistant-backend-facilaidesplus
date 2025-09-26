@@ -50,6 +50,7 @@ Tu dois respecter la spécification officielle : https://api.fr.openfisca.org/la
 - Pour les variables mensuelles (comme "age"), utilise toujours un mois complet au format "AAAA-MM" (ex: "${currentYear}-01").
 - Rends uniquement le JSON brut sans texte d’explication, sans commentaires, et sans balises markdown.
 - Structure toujours : "individus", "menages", "familles", "foyers_fiscaux". Même si certains sont vides.
+- Ajoute un bloc "variables" listant les aides sociales pertinentes avec la valeur null afin de demander leur calcul par OpenFisca.
 
 📌 Règles de construction :
 - Chaque individu doit avoir un identifiant unique clair (ex: "parent1", "conjoint1", "enfant1").
@@ -96,6 +97,11 @@ Exemple valide de base :
       "declarants": ["Claude", "Dominique"],
       "personnes_a_charge": ["Camille"]
     }
+  },
+  "variables": {
+    "rsa": null,
+    "prime_activite": null,
+    "aide_logement": null
   }
 }
 

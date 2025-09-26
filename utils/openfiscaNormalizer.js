@@ -1,3 +1,5 @@
+const { BENEFIT_VARIABLES } = require("./benefitVariables");
+
 const MARITAL_STATUS_KEYS = [
   "situation_familiale",
   "statut_marital",
@@ -103,6 +105,7 @@ function normalizeOpenFiscaInput(jsonInput) {
   }
 
   normalizeEntities(jsonInput);
+  normalizeVariables(jsonInput);
 
   const individus = jsonInput.individus;
   if (individus && typeof individus === "object" && !Array.isArray(individus)) {
@@ -115,6 +118,30 @@ function normalizeOpenFiscaInput(jsonInput) {
   }
 
   return jsonInput;
+}
+
+function normalizeVariables(jsonInput) {
+  let { variables } = jsonInput;
+
+  if (Array.isArray(variables)) {
+    const converted = {};
+    for (const item of variables) {
+      if (typeof item === "string" && item.trim()) {
+        converted[item.trim()] = null;
+      }
+    }
+    variables = converted;
+  } else if (!variables || typeof variables !== "object") {
+    variables = {};
+  }
+
+  for (const variable of BENEFIT_VARIABLES) {
+    if (!Object.prototype.hasOwnProperty.call(variables, variable)) {
+      variables[variable] = null;
+    }
+  }
+
+  jsonInput.variables = variables;
 }
 
 function normalizeMonthlyVariables(individu) {
