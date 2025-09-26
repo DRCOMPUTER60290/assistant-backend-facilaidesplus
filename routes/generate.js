@@ -12,8 +12,20 @@ const openai = new OpenAI({
 const currentYear = new Date().getFullYear();
 
 router.post("/", async (req, res) => {
-  const debugFlag = req.body.debug;
-  const debugMode = debugFlag === true || debugFlag === "true";
+  const debugFlag =
+    (req.body && Object.prototype.hasOwnProperty.call(req.body, "debug")
+      ? req.body.debug
+      : undefined) ??
+    (req.query && Object.prototype.hasOwnProperty.call(req.query, "debug")
+      ? req.query.debug
+      : undefined) ??
+    process.env.DEBUG_MODE;
+
+  const debugMode =
+    debugFlag === true ||
+    debugFlag === "true" ||
+    debugFlag === "1" ||
+    debugFlag === 1;
   try {
     const userInput = req.body.message;
 
@@ -130,12 +142,25 @@ try {
     // Étape 2 : Appel OpenFisca
     let openfiscaResponse;
     try {
+      if (debugMode) {
+        console.log(
+          "[DEBUG] JSON envoyé à OpenFisca:\n",
+          JSON.stringify(jsonInput, null, 2)
+        );
+      }
       openfiscaResponse = await axios.post(process.env.OPENFISCA_API_URL, jsonInput);
     } catch (e) {
+      if (debugMode) {
+        console.error(
+          "[DEBUG] Erreur de l'API OpenFisca:",
+          e.response?.data || e.message
+        );
+      }
       return res.status(502).json({
         error: "Erreur lors de la communication avec l'API OpenFisca",
         message: e.message,
-        details: e.response?.data || null
+        details: e.response?.data || null,
+        ...(debugMode ? { json_envoye: jsonInput } : {})
       });
     }
 
