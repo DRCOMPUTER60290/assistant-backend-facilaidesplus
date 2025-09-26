@@ -26,80 +26,69 @@ router.post("/", async (req, res) => {
     }
 
     // Étape 1 : ChatGPT → JSON OpenFisca
-    const prompt = `
-Tu es un assistant social expert. À partir du texte ci-dessous, génère un objet JSON conforme à l'API OpenFisca France (https://api.fr.openfisca.org/latest/calculate) pour construire le json tu peux t'aider de la spec officiel d'openfisca via ce lien : https://api.fr.openfisca.org/latest/spec.
+const prompt = `
+Tu es un assistant social expert. À partir du texte utilisateur ci-dessous, génère un objet JSON STRICTEMENT conforme à l'API OpenFisca France (https://api.fr.openfisca.org/latest/calculate). 
+Tu peux t'appuyer sur la spec officielle : https://api.fr.openfisca.org/latest/spec.
 
-⚠️ Les seules entités valides sont : "individus", "menages", "foyers_fiscaux", "familles". N'utilise jamais "persons", "households", ni "families" en anglais.
-Respecte strictement les noms de champs et les valeurs attendues par la spécification.
+⚠️ Règles impératives :
+- Les seules entités valides sont : "individus", "menages", "foyers_fiscaux", "familles".
+- N'utilise jamais "persons", "households", "families" en anglais.
+- Respecte exactement les noms de variables OpenFisca (ex: "salaire_de_base", "age", "indemnite_chomage_brut", "handicap").
+- L'année de référence pour toutes les variables est ${currentYear}.
+- Rends uniquement le JSON brut sans texte d’explication, sans commentaires, et sans balises markdown.
+- Structure toujours : "individus", "menages", "familles", "foyers_fiscaux". Même si certains sont vides.
 
-L'année de référence pour tous les montants et périodes doit être ${currentYear}. Utilise cette année par défaut si l'utilisateur n'en fournit pas explicitement une autre.
+📌 Règles de construction :
+- Chaque individu doit avoir un identifiant unique clair (ex: "parent1", "conjoint1", "enfant1").
+- Inclure "age" pour chaque individu si possible.
+- Si un revenu est mentionné mensuellement → convertir en revenu annuel.
+- Si un enfant a 16 ans ou plus et mentionne un revenu → ajouter "salaire_de_base".
+- Les couples doivent apparaître comme "personne_de_reference" + "conjoint" dans "menages", et "parents" dans "familles".
+- Les célibataires apparaissent comme seule "personne_de_reference".
+- Toujours créer un foyer fiscal avec au moins les déclarants.
 
-Rends uniquement le JSON brut sans texte d’explication et sans bloc markdown. Structure bien les identifiants.
-
-Exemple officiel  de json de base envoyé a openfisca pour un couple Claude et dominique gagnant respectivement 20000€ et 30000€ annuel et ayant une fille camille qui n'a pas de revenu :
+Exemple valide de base :
 
 {
   "individus": {
     "Claude": {
-      "salaire_de_base": {
-        "${currentYear}": 20000
-      }
+      "salaire_de_base": { "${currentYear}": 20000 },
+      "age": { "${currentYear}": 40 }
     },
     "Dominique": {
-      "salaire_de_base": {
-        "${currentYear}": 30000
-      }
+      "salaire_de_base": { "${currentYear}": 30000 },
+      "age": { "${currentYear}": 38 }
     },
     "Camille": {
+      "age": { "${currentYear}": 10 }
     }
   },
   "menages": {
     "menage_1": {
-      "personne_de_reference": [
-        "Claude"
-      ],
-      "conjoint": [
-        "Dominique"
-      ],
-      "enfants": [
-        "Camille"
-      ],
-      "revenu_disponible": {
-        "${currentYear}": null
-      },
-      "impots_directs": {
-        "${currentYear}": null
-      }
+      "personne_de_reference": ["Claude"],
+      "conjoint": ["Dominique"],
+      "enfants": ["Camille"],
+      "revenu_disponible": { "${currentYear}": null },
+      "impots_directs": { "${currentYear}": null }
     }
   },
   "familles": {
     "famille_1": {
-      "parents": [
-        "Claude",
-        "Dominique"
-      ],
-      "enfants": [
-        "Camille"
-      ]
+      "parents": ["Claude", "Dominique"],
+      "enfants": ["Camille"]
     }
   },
   "foyers_fiscaux": {
     "foyer_fiscal_1": {
-      "declarants": [
-        "Claude",
-        "Dominique"
-      ],
-      "personnes_a_charge": [
-        "Camille"
-      ]
+      "declarants": ["Claude", "Dominique"],
+      "personnes_a_charge": ["Camille"]
     }
   }
 }
 
-
-
 Texte utilisateur : ${userInput}
 `;
+
 
 
     const aiResponse = await openai.chat.completions.create({
@@ -193,6 +182,7 @@ Nous sommes en ${currentYear}. Voici les résultats JSON d’une simulation Open
 });
 
 module.exports = router;
+
 
 
 
