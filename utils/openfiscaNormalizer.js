@@ -94,6 +94,9 @@ function normalizeMaritalStatusContainer(container) {
   }
 }
 
+const PERIOD_YEAR_REGEX = /^\d{4}$/;
+const MONTHLY_VARIABLES = new Set(["age"]);
+
 function normalizeOpenFiscaInput(jsonInput) {
   if (!jsonInput || typeof jsonInput !== "object") {
     return jsonInput;
@@ -106,11 +109,36 @@ function normalizeOpenFiscaInput(jsonInput) {
     for (const individu of Object.values(individus)) {
       if (individu && typeof individu === "object") {
         normalizeMaritalStatusContainer(individu);
+        normalizeMonthlyVariables(individu);
       }
     }
   }
 
   return jsonInput;
+}
+
+function normalizeMonthlyVariables(individu) {
+  for (const [variable, value] of Object.entries(individu)) {
+    if (!MONTHLY_VARIABLES.has(variable) || !value || typeof value !== "object") {
+      continue;
+    }
+
+    const normalized = {};
+    let hasChanged = false;
+
+    for (const [period, periodValue] of Object.entries(value)) {
+      if (PERIOD_YEAR_REGEX.test(period)) {
+        normalized[`${period}-01`] = periodValue;
+        hasChanged = true;
+      } else {
+        normalized[period] = periodValue;
+      }
+    }
+
+    if (hasChanged) {
+      individu[variable] = normalized;
+    }
+  }
 }
 
 function normalizeEntities(jsonInput) {

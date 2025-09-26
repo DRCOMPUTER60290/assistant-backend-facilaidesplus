@@ -39,20 +39,21 @@ router.post("/", async (req, res) => {
 
     // Étape 1 : ChatGPT → JSON OpenFisca
 const prompt = `
-Tu es un assistant social expert. À partir du texte utilisateur ci-dessous, génère un objet JSON STRICTEMENT conforme à l'API OpenFisca France (https://api.fr.openfisca.org/latest/calculate). 
-Tu peux t'appuyer sur la spec officielle : https://api.fr.openfisca.org/latest/spec.
+Tu es un assistant social expert. À partir du texte utilisateur ci-dessous, génère un objet JSON STRICTEMENT conforme à l'API OpenFisca France (https://api.fr.openfisca.org/latest/calculate).
+Tu dois respecter la spécification officielle : https://api.fr.openfisca.org/latest/spec.
 
 ⚠️ Règles impératives :
 - Les seules entités valides sont : "individus", "menages", "foyers_fiscaux", "familles".
 - N'utilise jamais "persons", "households", "families" en anglais.
 - Respecte exactement les noms de variables OpenFisca (ex: "salaire_de_base", "age", "indemnite_chomage_brut", "handicap").
 - L'année de référence pour toutes les variables est ${currentYear}.
+- Pour les variables mensuelles (comme "age"), utilise toujours un mois complet au format "AAAA-MM" (ex: "${currentYear}-01").
 - Rends uniquement le JSON brut sans texte d’explication, sans commentaires, et sans balises markdown.
 - Structure toujours : "individus", "menages", "familles", "foyers_fiscaux". Même si certains sont vides.
 
 📌 Règles de construction :
 - Chaque individu doit avoir un identifiant unique clair (ex: "parent1", "conjoint1", "enfant1").
-- Inclure "age" pour chaque individu si possible.
+- Inclure "age" pour chaque individu si possible en respectant le format de période demandé.
 - Si un revenu est mentionné mensuellement → convertir en revenu annuel.
 - Si un enfant a 16 ans ou plus et mentionne un revenu → ajouter "salaire_de_base".
 - Les couples doivent apparaître comme "personne_de_reference" + "conjoint" dans "menages", et "parents" dans "familles".
@@ -65,14 +66,14 @@ Exemple valide de base :
   "individus": {
     "Claude": {
       "salaire_de_base": { "${currentYear}": 20000 },
-      "age": { "${currentYear}": 40 }
+      "age": { "${currentYear}-01": 40 }
     },
     "Dominique": {
       "salaire_de_base": { "${currentYear}": 30000 },
-      "age": { "${currentYear}": 38 }
+      "age": { "${currentYear}-01": 38 }
     },
     "Camille": {
-      "age": { "${currentYear}": 10 }
+      "age": { "${currentYear}-01": 10 }
     }
   },
   "menages": {
